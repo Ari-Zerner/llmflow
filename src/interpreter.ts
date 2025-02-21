@@ -1,32 +1,27 @@
 import * as fs from "fs";
+import { 
+  Program, 
+  Routine, 
+  Trace, 
+  PromptRoutine, 
+  CodeRoutine, 
+  DefineRoutine, 
+  IfRoutine, 
+  ComposeRoutine, 
+  JoinRoutine,
+  PromptTrace,
+  CodeTrace,
+  DefineTrace,
+  IfTrace,
+  ComposeTrace,
+  JoinTrace
+} from './types';
 
 // Substitute variables in template of the form ${varName} using the env object.
 function substitute(template: string, env: any): string {
   return template.replace(/\$\{(\w+)\}/g, (match, varName) => {
     return (env[varName] !== undefined) ? String(env[varName]) : "";
   });
-}
-
-export interface Routine {
-  type: string;
-  [key: string]: any;
-}
-
-export interface Program {
-  doc?: string;
-  routines: { [name: string]: Routine };
-  main: string;
-}
-
-export interface Trace {
-  routine: string;
-  type: string;
-  inputs: any;
-  outputs?: any;
-  llm_call?: any;
-  branch_taken?: string;
-  subtrace?: Trace | Trace[];
-  subtraces?: Trace[];
 }
 
 export class Interpreter {
@@ -49,7 +44,7 @@ export class Interpreter {
     }
   }
 
-  private handlePrompt(routine: Routine, env: any, trace: Trace): { outputs: any; trace: Trace } {
+  private handlePrompt(routine: PromptRoutine, env: any, trace: PromptTrace): { outputs: any; trace: PromptTrace } {
     const outputs: any = {};
     this.handleRoutine(routine, env, outputs);
 
@@ -65,7 +60,7 @@ export class Interpreter {
     return { outputs, trace };
   }
 
-  private handleDefine(routine: Routine, env: any, trace: Trace): { outputs: any; trace: Trace } {
+  private handleDefine(routine: DefineRoutine, env: any, trace: DefineTrace): { outputs: any; trace: DefineTrace } {
     const outputs: any = {};
     this.handleRoutine(routine, env, outputs);
 
@@ -81,7 +76,7 @@ export class Interpreter {
     return { outputs, trace };
   }
 
-  private handleCode(routine: Routine, env: any, trace: Trace): { outputs: any; trace: Trace } {
+  private handleCode(routine: CodeRoutine, env: any, trace: CodeTrace): { outputs: any; trace: CodeTrace } {
     const outputs: any = {};
     this.handleRoutine(routine, env, outputs);
 
@@ -100,18 +95,18 @@ export class Interpreter {
     return { outputs, trace };
   }
 
-  private handleIf(routine: Routine, env: any, trace: Trace): { outputs: any; trace: Trace } {
+  private handleIf(routine: IfRoutine, env: any, trace: IfTrace): { outputs: any; trace: IfTrace } {
     const outputs: any = {};
     this.handleRoutine(routine, env, outputs);
 
     const conditionVar: string = routine.condition;
     const condValue = env[conditionVar];
     const branch = condValue ? "then" : "else";
-    const branchRoutine = routine[branch];
-    if (!branchRoutine) {
+    const branchRoutineName = routine[branch];
+    if (!branchRoutineName) {
       throw new Error(`'if' routine missing '${branch}' branch.`);
     }
-    const { outputs: branchOutputs, trace: subtrace } = this.executeRoutine(branchRoutine, env);
+    const { outputs: branchOutputs, trace: subtrace } = this.executeRoutine(branchRoutineName, env);
     trace.branch_taken = branch;
     trace.subtrace = subtrace;
     Object.assign(outputs, branchOutputs);
@@ -119,7 +114,7 @@ export class Interpreter {
     return { outputs, trace };
   }
 
-  private handleCompose(routine: Routine, env: any, trace: Trace): { outputs: any; trace: Trace } {
+  private handleCompose(routine: ComposeRoutine, env: any, trace: ComposeTrace): { outputs: any; trace: ComposeTrace } {
     let currentEnv = env;
     const subtraces: Trace[] = [];
     const routines: string[] = routine.routines;
@@ -133,7 +128,7 @@ export class Interpreter {
     return { outputs: currentEnv, trace };
   }
 
-  private handleJoin(routine: Routine, env: any, trace: Trace): { outputs: any; trace: Trace } {
+  private handleJoin(routine: JoinRoutine, env: any, trace: JoinTrace): { outputs: any; trace: JoinTrace } {
     const outputs: any = {};
     const subtraces: Trace[] = [];
     const routines: string[] = routine.routines;
@@ -153,7 +148,9 @@ export class Interpreter {
       throw new Error(`Routine '${routineName}' not found.`);
     }
     const routineType = routine.type;
-    const trace: Trace = {
+    
+    // Create the appropriate trace type based on routine type
+    const baseTrace = {
       routine: routineName,
       type: routineType,
       inputs: { ...env }
@@ -161,17 +158,17 @@ export class Interpreter {
 
     switch (routineType) {
       case "prompt":
-        return this.handlePrompt(routine, env, trace);
-      case "define":
-        return this.handleDefine(routine, env, trace);
+        return this.handlePrompt(routine as PromptRoutine, env, { ...baseTrace, type: "prompt" } as PromptTrace);
       case "code":
-        return this.handleCode(routine, env, trace);
+        return this.handleCode(routine as CodeRoutine, env, { ...baseTrace, type: "code" } as CodeTrace);
+      case "define":
+        return this.handleDefine(routine as DefineRoutine, env, { ...baseTrace, type: "define" } as DefineTrace);
       case "if":
-        return this.handleIf(routine, env, trace);
-      case "join":
-        return this.handleJoin(routine, env, trace);
+        return this.handleIf(routine as IfRoutine, env, { ...baseTrace, type: "if", branch_taken: "then", subtrace: {} as Trace } as IfTrace);
       case "compose":
-        return this.handleCompose(routine, env, trace);
+        return this.handleCompose(routine as ComposeRoutine, env, { ...baseTrace, type: "compose", subtraces: [] } as ComposeTrace);
+      case "join":
+        return this.handleJoin(routine as JoinRoutine, env, { ...baseTrace, type: "join", subtraces: [] } as JoinTrace);
       default:
         throw new Error(`Unknown routine type: ${routineType}`);
     }
