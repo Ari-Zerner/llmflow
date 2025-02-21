@@ -46,15 +46,9 @@ A `prompt` routine makes a single call to an LLM. It has the following propertie
 A `define` routine can rename, drop, or duplicate variables, as well as create variables from literal values. It has the following properties:
 - `outputs`: object. A dictionary of string->string|object. Each key is the name of an output, and each value is either the name of an input or an object with `type` and `value` properties.
 
-#### file
-
-A `file` routine reads a file from the file system. It has the following properties:
-- `path`: string. The path to the file to read.
-- `output`: string. The name of the output variable to store the file's contents.
-
 #### code
 
-A `code` routine runs arbitrary code. The routine's inputs will be available to the code as an object called `input` and the code must return a JSON object where all values have types that exist in the DSL's type system, which becomes the routine's outputs. It has the following properties:
+A `code` routine runs arbitrary code. The routine's inputs will be available to the code as an object called `input` and the code must be an expression that evaluates to a JSON object where all values have types that exist in the DSL's type system, which becomes the routine's outputs. It has the following properties:
 - `code`: string. The code to run.
 
 ### Control routines
