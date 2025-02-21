@@ -1,0 +1,76 @@
+{
+  "doc": "A simple program that generates a personalized greeting using all routine types",
+  "routines": {
+    "get_greeting": {
+      "type": "prompt",
+      "dev_msg": "Generate a friendly greeting for the user",
+      "user_msg": "Please generate a warm greeting for ${name}",
+      "outputs": {
+        "greeting": "string"
+      },
+      "passthrough": ["name"]
+    },
+    "check_time": {
+      "type": "code",
+      "code": "{'is_morning': input['time_of_day'] && input['time_of_day'].toLowerCase().includes('morning')}",
+      "passthrough": ["name"]
+    },
+    "add_morning_activity": {
+      "type": "define",
+      "outputs": {
+        "greeting": "greeting",
+        "activity": {
+          "type": "string",
+          "value": "Would you like some coffee?"
+        },
+        "is_morning": true
+      },
+      "passthrough": ["name"]
+    },
+    "add_evening_activity": {
+      "type": "define",
+      "outputs": {
+        "greeting": "greeting",
+        "activity": {
+          "type": "string",
+          "value": "How about some tea?"
+        },
+        "is_morning": false
+      },
+      "passthrough": ["name"]
+    },
+    "morning_flow": {
+      "type": "compose",
+      "routines": ["get_greeting", "add_morning_activity"]
+    },
+    "evening_flow": {
+      "type": "compose",
+      "routines": ["get_greeting", "add_evening_activity"]
+    },
+    "choose_greeting": {
+      "type": "if",
+      "condition": "is_morning",
+      "then": "morning_flow",
+      "else": "evening_flow"
+    },
+    "time_based_greeting": {
+      "type": "compose",
+      "routines": ["check_time", "choose_greeting"]
+    },
+    "add_emoji": {
+      "type": "define",
+      "outputs": {
+        "emoji": {
+          "type": "string",
+          "value": "👋"
+        }
+      },
+      "passthrough": ["greeting", "name", "activity", "is_morning"]
+    },
+    "final_message": {
+      "type": "join",
+      "routines": ["time_based_greeting", "add_emoji"]
+    }
+  },
+  "main": "final_message"
+}

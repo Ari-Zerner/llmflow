@@ -6,13 +6,17 @@ We want to rapidly iterate on different approaches to using LLMs.
 
 Invent a domain-specific language for chaining together LLM calls. Then, we can use this to express different approaches, and store the output of an approach along with a simple representation of the approach, rather than the approach being coupled with other code.
 
-# Initial DSL design proposal
+# DSL Design
 
 ## Program
 
 A program is a JSON object with the following properties:
 - `doc`: string (optional). A high-level description of the program.
-- `routines`: dict of string->routine. The keys are the names of the routines, and a routine is a JSON object with a `type` property, an optional `doc` property, and other properties specific to the routine type. A routine takes inputs and/or returns outputs.
+- `routines`: dict of string->routine. The keys are the names of the routines, and a routine is a JSON object with the following common properties:
+  - `type`: string. The type of the routine.
+  - `doc`: string (optional). A description of what the routine does.
+  - `passthrough`: array of strings (optional). Names of input variables to pass through unchanged to the outputs.
+  Other properties are specific to the routine type.
 - `main`: string. The name of the routine to call when the program is run.
 
 The output of running a program should be a JSON object with the following properties:
@@ -73,8 +77,6 @@ A `compose` routine composes multiple routines together, passing its inputs as i
 ## Syntax
 
 In the first iteration of this system, we'll just use JSON files to represent programs. Later, it might be nice to create a specialized syntax for routines that can be expressed concisely. For instance:
-- `file`: `output<-path`
 - `if`: `condition ? then : else`
 - `join`: `routine1 + routine2 + ...`
 - `compose`: `routine1; routine2; ...`
-
