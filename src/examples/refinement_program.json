@@ -1,0 +1,31 @@
+{
+  "doc": "Refinement loop program that lets the LLM decide when refinement is complete",
+  "routines": {
+    "refine": {
+      "type": "prompt",
+      "dev_msg": "You are refining text. Return both the refined text and whether you think it's complete.",
+      "user_msg": "Current text: ${text}",
+      "outputs": {
+        "text": "string",
+        "is_complete": "boolean"
+      }
+    },
+    "if_loop": {
+      "type": "if",
+      "condition": "is_complete",
+      "then": "finished",
+      "else": "cycle"
+    },
+    "finished": {
+      "type": "define",
+      "outputs": {
+        "final_text": "text"
+      }
+    },
+    "cycle": {
+      "type": "compose",
+      "routines": ["refine", "if_loop"]
+    }
+  },
+  "main": "cycle"
+}

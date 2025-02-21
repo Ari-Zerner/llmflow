@@ -16,6 +16,7 @@ import {
   ComposeTrace,
   JoinTrace
 } from './types';
+import { LLMService, DefaultLLMService } from './llm';
 
 // Substitute variables in template of the form ${varName} using the env object.
 function substitute(template: string, env: any): string {
@@ -27,10 +28,12 @@ function substitute(template: string, env: any): string {
 export class Interpreter {
   program: Program;
   routines: { [name: string]: Routine };
+  llmService: LLMService;
 
-  constructor(program: Program) {
+  constructor(program: Program, llmService?: LLMService) {
     this.program = program;
     this.routines = program.routines || {};
+    this.llmService = llmService || new DefaultLLMService();
   }
 
   private handleRoutine(routine: Routine, env: any, outputs: any): void {
@@ -51,10 +54,11 @@ export class Interpreter {
     const devMsg: string = routine.dev_msg || "";
     const userMsgTemplate: string = routine.user_msg || "";
     const userMsg = substitute(userMsgTemplate, env);
-    // For each declared output, simulate an LLM response
-    for (const key in routine.outputs) {
-      outputs[key] = `simulated_${key}_response_based_on_${userMsg}`;
-    }
+    
+    // Get structured outputs from LLM
+    const llmOutputs = this.llmService.callLLM(devMsg, userMsg, routine.outputs);
+    Object.assign(outputs, llmOutputs);
+    
     trace.llm_call = { dev_msg: devMsg, user_msg: userMsg };
     trace.outputs = outputs;
     return { outputs, trace };
