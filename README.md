@@ -6,6 +6,38 @@ We want to rapidly iterate on different approaches to using LLMs.
 
 Invent a domain-specific language for chaining together LLM calls. Then, we can use this to express different approaches, and store the output of an approach along with a simple representation of the approach, rather than the approach being coupled with other code.
 
+# Usage
+
+## Setup
+
+1. Install dependencies:
+```bash
+npm install
+```
+
+2. Create a `.env` file with your OpenAI API key:
+```
+OPENAI_API_KEY=your_key_here
+```
+
+## Running Programs
+
+Run a program using:
+```bash
+npm start -- <program_file.json> --inputs 'key:value, key2:value2' [--output output.json]
+```
+
+For example:
+```bash
+npm start -- src/examples/test_program.json --inputs 'name:Alice, time_of_day:morning'
+```
+
+The output will be written to output.json (or the specified output file) and will contain:
+- The program that was run
+- The inputs provided
+- The outputs generated
+- A complete trace of the execution
+
 # DSL Design
 
 ## Program

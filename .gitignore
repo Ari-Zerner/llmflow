@@ -31,3 +31,9 @@ build/
 .cache/
 .temp/
 *.log
+
+# Generated files
+output.json
+
+# Design docs
+*.design.md
