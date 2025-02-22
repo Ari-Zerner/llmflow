@@ -3,7 +3,8 @@ import { Program, Routine, PromptRoutine, CodeRoutine, DefineRoutine, IfRoutine,
 const VALID_TYPES = ['string', 'number', 'boolean', 'string[]', 'number[]', 'boolean[]'];
 
 function validateType(type: string): void {
-  if (!VALID_TYPES.includes(type)) {
+  const baseType = type.replace(/\?$/, '');
+  if (!VALID_TYPES.includes(baseType)) {
     throw new Error(`Invalid type: ${type}`);
   }
 }
@@ -28,22 +29,37 @@ function validateCodeRoutine(routine: CodeRoutine) {
   }
 }
 
-function validateDefineRoutine(routine: DefineRoutine, routines: Record<string, Routine>, env: any = {}) {
+function validateDefineRoutine(routine: DefineRoutine, routines: Record<string, Routine>, inputs: any = {}) {
   if (!routine.outputs || typeof routine.outputs !== 'object') {
     throw new Error('Define routine must have outputs object');
   }
 
   const outputs: any = {};
-  for (const [name, spec] of Object.entries(routine.outputs)) {
-    if (typeof spec === 'string') {
-      if (!(spec in env) && !(spec in outputs)) {
-        throw new Error(`Input "${spec}" not found`);
-      }
-    } else if (typeof spec === 'object') {
+  const entries = Object.entries(routine.outputs);
+  
+  // First pass: validate and collect all outputs to allow forward references
+  for (const [name, spec] of entries) {
+    if (typeof spec === 'object') {
       validateType(spec.type);
       outputs[name] = spec.value;
+    } else if (typeof spec === 'string') {
+      const isOptional = spec.endsWith('?');
+      const inputName = isOptional ? spec.slice(0, -1) : spec;
+      outputs[name] = inputName;
     }
   }
+
+  // Second pass: validate all references exist
+  for (const [name, spec] of entries) {
+    if (typeof spec === 'string') {
+      const isOptional = spec.endsWith('?');
+      const inputName = isOptional ? spec.slice(0, -1) : spec;
+      if (!isOptional && !(inputName in inputs) && !(inputName in outputs)) {
+        throw new Error(`Input "${inputName}" not found`);
+      }
+    }
+  }
+
   return outputs;
 }
 
@@ -87,8 +103,7 @@ function validateJoinRoutine(routine: JoinRoutine, routines: Record<string, Rout
   }
 }
 
-function validateRoutine(routine: Routine, routines: Record<string, Routine>, env: any = {}): any {
-  const outputs: any = {};
+function validateRoutine(routine: Routine, routines: Record<string, Routine>, inputs: any = {}): void {
   switch (routine.type) {
     case 'prompt':
       validatePromptRoutine(routine);
@@ -97,7 +112,7 @@ function validateRoutine(routine: Routine, routines: Record<string, Routine>, en
       validateCodeRoutine(routine);
       break;
     case 'define':
-      Object.assign(outputs, validateDefineRoutine(routine, routines, env));
+      validateDefineRoutine(routine, routines, inputs);
       break;
     case 'if':
       validateIfRoutine(routine, routines);
@@ -112,7 +127,6 @@ function validateRoutine(routine: Routine, routines: Record<string, Routine>, en
       const _exhaustiveCheck: never = routine;
       throw new Error(`Unknown routine type: ${(routine as any).type}`);
   }
-  return outputs;
 }
 
 export function validateProgram(program: Program): void {
@@ -128,9 +142,30 @@ export function validateProgram(program: Program): void {
     throw new Error(`Main routine "${program.main}" not found in routines`);
   }
 
-  const env: any = {};
-  for (const [name, routine] of Object.entries(program.routines)) {
-    const outputs = validateRoutine(routine, program.routines, env);
-    Object.assign(env, outputs);
+  // First validate all routines have basic structure
+  for (const routine of Object.values(program.routines)) {
+    if (routine.type === 'define' && (!routine.outputs || typeof routine.outputs !== 'object')) {
+      throw new Error('Define routine must have outputs object');
+    }
+  }
+
+  // Collect all define routine outputs for validation context
+  const definedOutputs: any = {};
+  for (const routine of Object.values(program.routines)) {
+    if (routine.type === 'define') {
+      for (const [name, spec] of Object.entries(routine.outputs)) {
+        if (typeof spec === 'object') {
+          validateType(spec.type);
+          definedOutputs[name] = spec.value;
+        } else if (typeof spec === 'string') {
+          definedOutputs[name] = spec;
+        }
+      }
+    }
+  }
+
+  // Validate all routines with complete context
+  for (const routine of Object.values(program.routines)) {
+    validateRoutine(routine, program.routines, definedOutputs);
   }
 }

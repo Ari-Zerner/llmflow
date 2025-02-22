@@ -70,9 +70,19 @@ export class Interpreter {
 
     for (const key in routine.outputs) {
       const spec = routine.outputs[key];
-      if (typeof spec === "string") {
-        outputs[key] = env[spec];
-      } else if (typeof spec === "object") {
+      if (typeof spec === 'string') {
+        // Handle optional input references
+        const isOptional = spec.endsWith('?');
+        const inputName = isOptional ? spec.slice(0, -1) : spec;
+        if (inputName in env) {
+          outputs[key] = env[inputName];
+        } else if (!isOptional) {
+          outputs[key] = undefined;
+        }
+      } else if (typeof spec === 'object') {
+        if (spec.optional && spec.value === undefined) {
+          continue;
+        }
         outputs[key] = spec.value;
       }
     }

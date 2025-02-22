@@ -20,7 +20,7 @@ export interface CodeRoutine extends BaseRoutine {
 
 export interface DefineRoutine extends BaseRoutine {
   type: 'define';
-  outputs: Record<string, string | { type: string; value: any }>;
+  outputs: Record<string, string | { type: string; value: any; optional?: boolean }>;
 }
 
 export interface IfRoutine extends BaseRoutine {

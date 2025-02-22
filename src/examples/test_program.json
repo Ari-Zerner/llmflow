@@ -23,6 +23,12 @@
           "type": "string",
           "value": "Would you like some coffee?"
         },
+        "optional_data": {
+          "type": "string",
+          "value": "some data",
+          "optional": true
+        },
+        "maybe_name": "name?",
         "is_morning": true
       },
       "passthrough": ["name"]

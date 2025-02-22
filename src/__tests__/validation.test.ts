@@ -211,6 +211,38 @@ describe('Program Validation', () => {
     expect(() => validateProgram(program)).toThrow('Join routine must have routines array');
   });
 
+  it('should reject a prompt routine with invalid output type', () => {
+    const program: Program = {
+      routines: {
+        test_prompt: {
+          type: 'prompt',
+          dev_msg: 'Test message',
+          user_msg: 'Test ${var}',
+          outputs: {
+            response: 'invalid_type'
+          }
+        }
+      },
+      main: 'test_prompt'
+    };
+
+    expect(() => validateProgram(program)).toThrow('Invalid type: invalid_type');
+  });
+
+  it('should reject empty routines array in compose', () => {
+    const program: Program = {
+      routines: {
+        test_compose: {
+          type: 'compose',
+          routines: []
+        }
+      },
+      main: 'test_compose'
+    };
+
+    expect(() => validateProgram(program)).toThrow('Compose routine must have at least one routine');
+  });
+
   it('should reject non-existent routine references', () => {
     const program: Program = {
       routines: {
@@ -288,5 +320,78 @@ describe('Program Validation', () => {
     };
 
     expect(() => validateProgram(program)).toThrow('Input "non_existent_input" not found');
+  });
+
+  it('should validate optional types in prompt outputs', () => {
+    const program: Program = {
+      routines: {
+        test_prompt: {
+          type: 'prompt',
+          dev_msg: 'Test message',
+          user_msg: 'Test ${var}',
+          outputs: {
+            required: 'string',
+            optional: 'string?'
+          }
+        }
+      },
+      main: 'test_prompt'
+    };
+
+    expect(() => validateProgram(program)).not.toThrow();
+  });
+
+  it('should validate optional input references in define routine', () => {
+    const program: Program = {
+      routines: {
+        test_define: {
+          type: 'define',
+          outputs: {
+            required: 'input_var',
+            optional: 'input_var?',
+            literal: {
+              type: 'string',
+              value: 'test'
+            }
+          }
+        },
+        input_provider: {
+          type: 'define',
+          outputs: {
+            input_var: {
+              type: 'string',
+              value: 'test'
+            }
+          }
+        }
+      },
+      main: 'test_define'
+    };
+
+    expect(() => validateProgram(program)).not.toThrow();
+  });
+
+  it('should validate optional outputs in define routine', () => {
+    const program: Program = {
+      routines: {
+        test_define: {
+          type: 'define',
+          outputs: {
+            required: {
+              type: 'string',
+              value: 'test'
+            },
+            optional: {
+              type: 'string',
+              value: 'test',
+              optional: true
+            }
+          }
+        }
+      },
+      main: 'test_define'
+    };
+
+    expect(() => validateProgram(program)).not.toThrow();
   });
 });
