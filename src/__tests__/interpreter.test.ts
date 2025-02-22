@@ -2,7 +2,7 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 import { Interpreter } from '../interpreter';
 import { LLMService } from '../llm';
-import { Program } from '../types';  // Add this import
+import { Program } from '../types';
 
 describe('Interpreter', () => {
   let testProgram: any;
@@ -13,40 +13,8 @@ describe('Interpreter', () => {
   });
 
   describe('greeting program', () => {
-    class TestLLMService implements LLMService {
-      callLLM(devMsg: string, userMsg: string, outputs: Record<string, string>): Record<string, any> {
-        // Extract name from user message for greeting
-        const nameMatch = userMsg.match(/for\s+(\w+)/);
-        const name = nameMatch ? nameMatch[1] : 'there';
-
-        return Object.fromEntries(
-          Object.entries(outputs).map(([key, type]) => {
-            switch (type) {
-              case 'string':
-                if (key === 'greeting') {
-                  return [key, `[MOCK] Hello ${name}!`];
-                }
-                return [key, `[MOCK] ${key}_response`];
-              case 'boolean':
-                return [key, Math.random() > 0.5];
-              case 'number':
-                return [key, Math.floor(Math.random() * 100)];
-              case 'string[]':
-                return [key, [`[MOCK] ${key}_item1`, `[MOCK] ${key}_item2`]];
-              case 'number[]':
-                return [key, [Math.random() * 100, Math.random() * 100]];
-              case 'boolean[]':
-                return [key, [Math.random() > 0.5, Math.random() > 0.5]];
-              default:
-                return [key, `[MOCK] Unsupported type: ${type}`];
-            }
-          })
-        );
-      }
-    }
-
     it('should generate morning greeting', () => {
-      const interpreter = new Interpreter(testProgram, new TestLLMService());
+      const interpreter = new Interpreter(testProgram, new MockLLMService());
       const result = interpreter.run({
         name: "Alice",
         time_of_day: "morning"
@@ -60,7 +28,7 @@ describe('Interpreter', () => {
     });
 
     it('should generate evening greeting', () => {
-      const interpreter = new Interpreter(testProgram, new TestLLMService());
+      const interpreter = new Interpreter(testProgram, new MockLLMService());
       const result = interpreter.run({
         name: "Bob",
         time_of_day: "evening"
@@ -74,7 +42,7 @@ describe('Interpreter', () => {
     });
 
     it('should handle missing inputs gracefully', () => {
-      const interpreter = new Interpreter(testProgram, new TestLLMService());
+      const interpreter = new Interpreter(testProgram, new MockLLMService());
       const result = interpreter.run({});
 
       expect(result.outputs).toMatchObject({
@@ -98,7 +66,8 @@ describe('Interpreter', () => {
         }
       };
 
-      const interpreter = new Interpreter(badProgram);
+      const mockLLM = new MockLLMService();
+      const interpreter = new Interpreter(badProgram, mockLLM);
       expect(() => {
         interpreter.run({ time_of_day: "morning" });
       }).toThrow("Routine 'non_existent_routine' not found");
@@ -116,7 +85,8 @@ describe('Interpreter', () => {
         main: 'bad_routine'
       };
 
-      const interpreter = new Interpreter(badProgram);
+      const mockLLM = new MockLLMService();
+      const interpreter = new Interpreter(badProgram, mockLLM);
       expect(() => {
         interpreter.run({});
       }).toThrow("Unknown routine type: invalid_type");
@@ -138,7 +108,8 @@ describe('Interpreter', () => {
         main: 'test_define'
       };
 
-      const interpreter = new Interpreter(program);
+      const mockLLM = new MockLLMService();
+      const interpreter = new Interpreter(program, mockLLM);
       const result = interpreter.run({ input_var: 'test' });
       
       expect(result.outputs).toEqual({
@@ -168,7 +139,8 @@ describe('Interpreter', () => {
         main: 'test_define'
       };
 
-      const interpreter = new Interpreter(program);
+      const mockLLM = new MockLLMService();
+      const interpreter = new Interpreter(program, mockLLM);
       const result = interpreter.run({});
       
       expect(result.outputs).toEqual({

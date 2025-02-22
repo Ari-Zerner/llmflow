@@ -16,7 +16,7 @@ import {
   ComposeTrace,
   JoinTrace
 } from './types';
-import { LLMService, DefaultLLMService } from './llm';
+import { LLMService } from './llm';
 
 // Substitute variables in template of the form ${varName} using the env object.
 function substitute(template: string, env: any): string {
@@ -30,10 +30,10 @@ export class Interpreter {
   routines: { [name: string]: Routine };
   llmService: LLMService;
 
-  constructor(program: Program, llmService?: LLMService) {
+  constructor(program: Program, llmService: LLMService) {
     this.program = program;
     this.routines = program.routines || {};
-    this.llmService = llmService || new DefaultLLMService();
+    this.llmService = llmService;
   }
 
   private handleRoutine(routine: Routine, env: any, outputs: any): void {
@@ -220,11 +220,8 @@ if (require.main === module) {
     }
   }
   try {
-    const programData = fs.readFileSync(programFile, "utf8");
-    const program: Program = JSON.parse(programData);
-    const interpreter = new Interpreter(program);
-    const result = interpreter.run(initialEnv);
-    console.log(JSON.stringify(result, null, 2));
+    console.error("Error: LLMService must be provided when running interpreter");
+    process.exit(1);
   } catch (e: any) {
     console.error("Error:", e.message);
     process.exit(1);
