@@ -13,9 +13,9 @@ describe('Interpreter', () => {
   });
 
   describe('greeting program', () => {
-    it('should generate morning greeting', () => {
+    it('should generate morning greeting', async () => {
       const interpreter = new Interpreter(testProgram, new MockLLMService());
-      const result = interpreter.run({
+      const result = await interpreter.run({
         name: "Alice",
         time_of_day: "morning"
       });
@@ -27,9 +27,9 @@ describe('Interpreter', () => {
       });
     });
 
-    it('should generate evening greeting', () => {
+    it('should generate evening greeting', async () => {
       const interpreter = new Interpreter(testProgram, new MockLLMService());
-      const result = interpreter.run({
+      const result = await interpreter.run({
         name: "Bob",
         time_of_day: "evening"
       });
@@ -41,9 +41,9 @@ describe('Interpreter', () => {
       });
     });
 
-    it('should handle missing inputs gracefully', () => {
+    it('should handle missing inputs gracefully', async () => {
       const interpreter = new Interpreter(testProgram, new MockLLMService());
-      const result = interpreter.run({});
+      const result = await interpreter.run({});
 
       expect(result.outputs).toMatchObject({
         greeting: expect.any(String),
@@ -54,7 +54,7 @@ describe('Interpreter', () => {
   });
 
   describe('error handling', () => {
-    it('should throw error for missing routine', () => {
+    it('should throw error for missing routine', async () => {
       const badProgram = {
         ...testProgram,
         routines: {
@@ -68,12 +68,11 @@ describe('Interpreter', () => {
 
       const mockLLM = new MockLLMService();
       const interpreter = new Interpreter(badProgram, mockLLM);
-      expect(() => {
-        interpreter.run({ time_of_day: "morning" });
-      }).toThrow("Routine 'non_existent_routine' not found");
+      await expect(interpreter.run({ time_of_day: "morning" }))
+        .rejects.toThrow("Routine 'non_existent_routine' not found");
     });
 
-    it('should throw error for unknown routine type', () => {
+    it('should throw error for unknown routine type', async () => {
       const badProgram = {
         ...testProgram,
         routines: {
@@ -87,14 +86,13 @@ describe('Interpreter', () => {
 
       const mockLLM = new MockLLMService();
       const interpreter = new Interpreter(badProgram, mockLLM);
-      expect(() => {
-        interpreter.run({});
-      }).toThrow("Unknown routine type: invalid_type");
+      await expect(interpreter.run({}))
+        .rejects.toThrow("Unknown routine type: invalid_type");
     });
   });
 
   describe('optional types', () => {
-    it('should handle optional input references', () => {
+    it('should handle optional input references', async () => {
       const program: Program = {
         routines: {
           test_define: {
@@ -110,7 +108,7 @@ describe('Interpreter', () => {
 
       const mockLLM = new MockLLMService();
       const interpreter = new Interpreter(program, mockLLM);
-      const result = interpreter.run({ input_var: 'test' });
+      const result = await interpreter.run({ input_var: 'test' });
       
       expect(result.outputs).toEqual({
         required: 'test',
@@ -118,7 +116,7 @@ describe('Interpreter', () => {
       });
     });
 
-    it('should handle optional outputs in define routine', () => {
+    it('should handle optional outputs in define routine', async () => {
       const program: Program = {
         routines: {
           test_define: {
@@ -141,7 +139,7 @@ describe('Interpreter', () => {
 
       const mockLLM = new MockLLMService();
       const interpreter = new Interpreter(program, mockLLM);
-      const result = interpreter.run({});
+      const result = await interpreter.run({});
       
       expect(result.outputs).toEqual({
         required: 'test'
@@ -152,7 +150,7 @@ describe('Interpreter', () => {
 });
 
 class MockLLMService implements LLMService {
-  callLLM(devMsg: string, userMsg: string, outputs: Record<string, string>): Record<string, any> {
+  async callLLM(devMsg: string, userMsg: string, outputs: Record<string, string>): Promise<Record<string, any>> {
     // Extract name from user message for greeting
     const nameMatch = userMsg.match(/for\s+(\w+)/);
     const name = nameMatch ? nameMatch[1] : 'there';
